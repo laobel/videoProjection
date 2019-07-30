@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>视频投放</title>
+    <link rel="stylesheet" href="./main.css" />
+    <script src="../Cesium-1.54/Build/Cesium/Cesium.js"></script>
+    <script src="../DataEarth/Build/ThirdParty/zTree/js/jquery-3.3.1.min.js"></script>
+    <style>
+        .btn{
+            width: 70px;
+            height: 45px;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.428571429;
+            border-radius: 15px;
+            margin-top: 3px;
+            float:left;
+            background-color: #1b1b1b;
+            border: 1px solid #d5d5d5;
+        }
+        #trailer {
+            position: absolute;
+            bottom: 15px;
+            right: 0;
+            width: 320px;
+            height: 180px;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer" class="fullSize"></div>
+<video id="trailer" muted autoplay loop crossorigin controls>
+    <source src="../DataEarth/web/examples/assets/videoProjection.mp4" type="video/mp4">
+    Your browser does not support the <code>video</code> element.
+</video>
+<div id="container" style="position: absolute;top: 5%;left: 10px;padding: 10px; background-color: rgba(38, 38, 38, 0.75);width: 250px; z-index: 9999">
+    <button id="analyze" class="btn" style="position: absolute;color: #ffff;">视频投放</button><br><br><br>
+    <div>
+        <h3>参数调整：</h3>
+    </div>
+
+    <div>
+        <label>距&nbsp&nbsp&nbsp离(米)：</label>
+        <input type="number" id="distance" min="1" max="500" step="1.0" value="200.0" style="width: 150px"  data-bind="value: distance, valueUpdate: 'input'">
+    </div><br>
+
+
+    <div>
+        <label>宽&nbsp&nbsp&nbsp度(度)：</label>
+        <input type="number" id="horizonalFov" min="1" max="120" step="1" value="1" style="width: 150px"  data-bind="value: horizontalFov, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>高&nbsp&nbsp&nbsp度(度)：</label>
+        <input type="number" id="verticalFov" min="1" max="90" step="1.0" value="1" style="width: 150px"  data-bind="value: verticalFov, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>方向角(度)：</label>
+        <input type="number" id="direction" min="0" max="360" step="1.0" value="0.0" style="width: 150px"  data-bind="value: direction, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>俯仰角(度)：</label>
+        <input type="number" id="pitch" min="-90" max="90" step="1.0" value="0.0" style="width: 150px"  data-bind="value: pitch, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>分析示意线：</label>
+        <input type="checkbox" value="true" data-bind="checked: hint, valueUpdate: 'checked'">
+    </div><br>
+
+    <div>
+        <label>第一人称相机：</label>
+        <input type="checkbox" id="firstCamera">
+    </div><br>
+
+    <button id="clear" style="float: right">清除</button>
+    <button id="observer" style="float: right">回到观察视角</button>
+</div>
+</body>
+<script>
+    /*示范代码说明：
+         * 本示范程序为视频投放可视化效果，可实时控制视频投放状态信息
+         *
+         * 主要涉及接口：
+         * DEVideoProjection
+         *
+         * 示范代码：
+         */
+    function startup(Cesium) {
+/*        var viewer = new Cesium.Viewer('cesiumContainer');
+        var scene = viewer.scene;
+        var videoProjection = undefined;
+        var google = new Cesium.UrlTemplateImageryProvider({
+            url : 'http://mt0.google.cn/vt/lyrs=s&hl=zh-CN&x={x}&y={y}&z={z}',
+            tilingScheme : new Cesium.WebMercatorTilingScheme(),
+            maximumLevel : 20
+        });
+        viewer.imageryLayers.addImageryProvider(google);
+        var tileset = new Cesium.Cesium3DTileset({
+            url: 'https://dataearth-preset.bd.bcebos.com/system_resource/xinghan/model.json',
+            shadows:Cesium.ShadowMode.ENABLED,
+            viewer:viewer
+        });
+        viewer.scene.primitives.add(tileset);
+        viewer.flyTo(tileset);*/
+
+        //天地图
+        var tdtImgMap = new Cesium.WebMapTileServiceImageryProvider({
+            url : "https://{s}.tianditu.com/img_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=img&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default&format=tiles&tk=b0ad70dc306d789204ddb4ec0b7c2b4d",
+            layer : "tdtImgBasicLayer1",
+            style : "default",
+            subdomains : ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7'],
+            format : "image/jpeg",
+            tileMatrixSetID : "GoogleMapsCompatible",
+            maximumLevel : 18,
+            credit : '云 S（2017）065号',
+            show : true
+        });
+
+        var terrainProvider = new Cesium.CesiumTerrainProvider({
+            //url:'https://maps.ynmap.cn/services/stk-terrain/tiles/4326/?key=njsc8ri2OHtkKtt0cnPVyoBx7Mr9QA7a%2Bc%2FF8OGpqG4%3D'
+            url : 'http://data.marsgis.cn/terrain'
+        });
+
+        //初始化viewer
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider : tdtImgMap,
+            //terrainProvider : terrainProvider,
+            animation : false,
+            baseLayerPicker : false,
+            fullscreenButton : false,
+            vrButton : false,
+            geocoder : false,
+            homeButton : false,
+            infoBox : false,
+            sceneModePicker : false,
+            selectionIndicator : false,
+            timeline : false,
+            navigationHelpButton : false,
+            navigationInstructionsInitiallyVisible : false
+        });
+
+        var scene = viewer.scene;
+        var videoProjection = undefined;
+
+        //viewer.scene.globe.depthTestAgainstTerrain = true;
+
+        var tileset = new Cesium.Cesium3DTileset({
+            url : 'http://data.marsgis.cn/3dtiles/qx-shequ/tileset.json'
+        });
+
+        viewer.scene.primitives.add(tileset);
+        viewer.zoomTo(tileset);
+
+
+        var viewModel = {
+            direction: 0.0,
+            pitch: 0.0,
+            hint:true,
+            distance: 200.0,
+            verticalFov: 60.0,
+            horizontalFov: 60.0,
+            visibleAreaColor: "rgb(0, 255, 0, 0.6)",
+            invisibleAreaColor: "rgb(255, 0, 0, 0.6)"
+        };
+        Cesium.knockout.track(viewModel);
+        var toolbar = document.getElementById('container');
+        Cesium.knockout.applyBindings(viewModel, toolbar);
+
+        //调整视频投放相关参数
+        Cesium.knockout.getObservable(viewModel, 'direction').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.direction = parseFloat(newValue);
+                }
+            }
+        );
+        Cesium.knockout.getObservable(viewModel, 'pitch').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.pitch = parseFloat(newValue);
+                }
+            }
+        );
+        Cesium.knockout.getObservable(viewModel, 'hint').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.showHintLine = newValue;
+                }
+            }
+        );
+        Cesium.knockout.getObservable(viewModel, 'distance').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.distance = parseFloat(newValue);
+                }
+            }
+        );
+        Cesium.knockout.getObservable(viewModel, 'verticalFov').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.verticalFov = parseFloat(newValue);
+                }
+            }
+        );
+        Cesium.knockout.getObservable(viewModel, 'horizontalFov').subscribe(
+            function (newValue) {
+                if(Cesium.defined(videoProjection)){
+                    videoProjection.horizontalFov = parseFloat(newValue);
+                }
+            }
+        )
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        var start = false;
+        $('#analyze').on('click', function(){
+            handler.setInputAction(function (e) {
+                start = true;
+                if(!Cesium.defined(videoProjection)){
+                    //创建视频投放分析对象
+                    var videoElement = document.getElementById('trailer');
+                    videoProjection = new Cesium.DEVideoProjection(viewer,videoElement);
+                    scene.primitives.add(videoProjection);
+                }
+                videoProjection.distance = 0;
+
+                var positionWC = scene.pickPosition(e.position);
+
+                videoProjection.viewerPosition = positionWC;
+                if($('#firstCamera').is(':checked')){
+                    //设置视频投放观察点
+                    videoProjection.viewerPosition = viewer.camera.positionWC.clone();
+                }
+
+                viewer.entities.add({
+                    position : videoProjection.viewerPosition,
+                    point : {
+                        color : Cesium.Color.YELLOW,
+                        pixelSize : 10
+                    }
+                });
+
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+            handler.setInputAction(function (e) {
+                if(start){
+                    handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
+                    var targetPosition = scene.pickPosition(e.endPosition);
+                    //设置视频投放目标点
+                    videoProjection.setTargetPoint(targetPosition);
+                }
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+            handler.setInputAction(function (e) {
+                if(Cesium.defined(videoProjection) && start){
+                    handler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+                    viewModel.direction = videoProjection.direction.toFixed(6);
+                    viewModel.pitch = videoProjection.pitch.toFixed(6);
+                    viewModel.distance = videoProjection.distance.toFixed(6);
+                    viewModel.horizontalFov = videoProjection.horizontalFov.toFixed(6);
+                    viewModel.verticalFov = videoProjection.verticalFov.toFixed(6);
+                }
+                start = false;
+            }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+        });
+        $('#observer').on('click', function () {
+            if(Cesium.defined(videoProjection)){
+                //切换到观察视角
+                videoProjection.locateToViewer();
+            }
+        });
+        $('#clear').on('click',function () {
+            if(Cesium.defined(videoProjection)){
+                videoProjection.distance = 0;
+                viewer.entities.removeAll();
+            }
+        })
+    }
+    if (typeof Cesium !== 'undefined') {
+        startup(Cesium);
+    } else if (typeof require === 'function') {
+        require(['Cesium'], startup);
+    }
+</script>
+</html>

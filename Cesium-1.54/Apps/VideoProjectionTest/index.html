@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8">
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Cesium Viewer</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="CesiumViewer.css" media="screen">
+    <script src="../../../DataEarth/Build/ThirdParty/zTree/js/jquery-3.3.1.min.js"></script>
+    <script data-main="CesiumViewerStartup" src="../../ThirdParty/requirejs-2.1.20/require.js"></script>
+</head>
+<body style="background: #000;">
+<div id="cesiumContainer" class="fullSize"></div>
+<video id="trailer" muted autoplay loop crossorigin controls>
+    <source src="../../../DataEarth/web/examples/assets/videoProjection.mp4" type="video/mp4">
+    Your browser does not support the <code>video</code> element.
+</video>
+<div id="container" style="position: absolute;top: 5%;left: 10px;padding: 10px; background-color: rgba(38, 38, 38, 0.75);width: 250px; z-index: 9999">
+    <button id="analyze" class="btn" style="position: absolute;color: #ffff;">视频投放</button><br><br><br>
+    <div>
+        <h3>参数调整：</h3>
+    </div>
+
+    <div>
+        <label>距&nbsp&nbsp&nbsp离(米)：</label>
+        <input type="number" id="distance" min="1" max="500" step="1.0" value="200.0" style="width: 150px"  data-bind="value: distance, valueUpdate: 'input'">
+    </div><br>
+
+
+    <div>
+        <label>宽&nbsp&nbsp&nbsp度(度)：</label>
+        <input type="number" id="horizonalFov" min="1" max="120" step="1" value="1" style="width: 150px"  data-bind="value: horizontalFov, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>高&nbsp&nbsp&nbsp度(度)：</label>
+        <input type="number" id="verticalFov" min="1" max="90" step="1.0" value="1" style="width: 150px"  data-bind="value: verticalFov, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>方向角(度)：</label>
+        <input type="number" id="direction" min="0" max="360" step="1.0" value="0.0" style="width: 150px"  data-bind="value: direction, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>俯仰角(度)：</label>
+        <input type="number" id="pitch" min="-90" max="90" step="1.0" value="0.0" style="width: 150px"  data-bind="value: pitch, valueUpdate: 'input'">
+    </div><br>
+
+    <div>
+        <label>分析示意线：</label>
+        <input type="checkbox" value="true" data-bind="checked: hint, valueUpdate: 'checked'">
+    </div><br>
+
+    <div>
+        <label>第一人称相机：</label>
+        <input type="checkbox" id="firstCamera">
+    </div><br>
+
+    <button id="clear" style="float: right">清除</button>
+    <button id="observer" style="float: right">回到观察视角</button>
+</div>
+</body>
+</html>
